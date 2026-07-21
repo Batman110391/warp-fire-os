@@ -20,6 +20,17 @@
 
     <string name="hint_reset">Long-press the title to reset the WARP registration</string>
 
+    <string name="update_title">Update available</string>
+    <string name="update_message">Version %1$s is available (you have %2$s).\n\nDownload and install it now?</string>
+    <string name="update_action">Update</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading">Downloading update… %1$d%%</string>
+    <string name="update_failed">Download failed. Try again later.</string>
+    <string name="update_permission_title">Permission needed</string>
+    <string name="update_permission_message">Allow this app to install apps, then press Update again.</string>
+    <string name="update_permission_action">Open settings</string>
+    <string name="update_permission_missing">Enable "Install unknown apps" for this app in Fire TV settings.</string>
+
     <string name="notification_channel_name">WARP tunnel</string>
     <string name="notification_connected">Tunnel active</string>
     <string name="fgs_special_use">WireGuard VPN tunnel managed by the user</string>

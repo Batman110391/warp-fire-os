@@ -1,6 +1,7 @@
 package com.batman110391.warpfiretv
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
@@ -11,6 +12,8 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
+import com.batman110391.warpfiretv.update.AppUpdater
+import com.batman110391.warpfiretv.update.AvailableUpdate
 import com.batman110391.warpfiretv.vpn.WireGuardTunnel
 import com.batman110391.warpfiretv.warp.WarpApi
 import com.batman110391.warpfiretv.warp.WarpConfig
@@ -36,8 +39,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var tunnel: WireGuardTunnel
     private val api = WarpApi()
 
+    private lateinit var updater: AppUpdater
+
     private var config: WarpConfig? = null
     private var busy = false
+
+    /** Ask about a given update at most once per app session. */
+    private var pendingUpdate: AvailableUpdate? = null
+    private var updatePrompted = false
+    private var awaitingInstallPermission = false
 
     private val vpnPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -64,6 +74,7 @@ class MainActivity : ComponentActivity() {
         store = WarpConfigStore(this)
         registration = WarpRegistration(store)
         tunnel = WireGuardTunnel.getInstance(this)
+        updater = AppUpdater(this)
 
         actionButton.setOnClickListener { onActionPressed() }
         actionButton.requestFocus()
@@ -80,11 +91,20 @@ class MainActivity : ComponentActivity() {
 
         requestNotificationPermissionIfNeeded()
         ensureRegistration()
+        checkForUpdate()
     }
 
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch { tunnel.refreshState() }
+
+        // Coming back from the "install unknown apps" settings screen: resume where we stopped
+        // instead of making the user hunt for the prompt again.
+        val update = pendingUpdate
+        if (awaitingInstallPermission && update != null && updater.canInstall()) {
+            awaitingInstallPermission = false
+            startUpdate(update)
+        }
     }
 
     private fun ensureRegistration() {
@@ -204,6 +224,76 @@ class MainActivity : ComponentActivity() {
         } else {
             showState(UiState.DISCONNECTED)
         }
+    }
+
+    // ---------------------------------------------------------------- in-app update
+
+    private fun checkForUpdate() {
+        lifecycleScope.launch {
+            val update = updater.checkForUpdate() ?: return@launch
+            pendingUpdate = update
+            if (!updatePrompted) {
+                updatePrompted = true
+                showUpdateDialog(update)
+            }
+        }
+    }
+
+    private fun showUpdateDialog(update: AvailableUpdate) {
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle(R.string.update_title)
+            .setMessage(getString(R.string.update_message, update.versionName, BuildConfig.VERSION_NAME))
+            .setPositiveButton(R.string.update_action) { _, _ -> startUpdate(update) }
+            .setNegativeButton(R.string.update_later, null)
+            .show()
+    }
+
+    private fun startUpdate(update: AvailableUpdate) {
+        if (!updater.canInstall()) {
+            awaitingInstallPermission = true
+            showInstallPermissionDialog()
+            return
+        }
+        awaitingInstallPermission = false
+        busy = true
+        actionButton.isEnabled = false
+        lifecycleScope.launch {
+            val apk = runCatching {
+                updater.download(update) { percent ->
+                    detailView.visibility = View.VISIBLE
+                    detailView.text = getString(R.string.update_downloading, percent)
+                }
+            }.getOrNull()
+
+            busy = false
+            if (apk == null || !updater.install(apk)) {
+                detailView.text = getString(R.string.update_failed)
+                actionButton.isEnabled = true
+                return@launch
+            }
+            // The system installer is now in front; when it finishes this process is replaced.
+            renderTunnelState()
+        }
+    }
+
+    private fun showInstallPermissionDialog() {
+        val intent = updater.installPermissionIntent()
+        if (intent == null) {
+            detailView.visibility = View.VISIBLE
+            detailView.text = getString(R.string.update_permission_missing)
+            return
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+            .setTitle(R.string.update_permission_title)
+            .setMessage(R.string.update_permission_message)
+            .setPositiveButton(R.string.update_permission_action) { _, _ ->
+                runCatching { startActivity(intent) }.onFailure {
+                    detailView.visibility = View.VISIBLE
+                    detailView.text = getString(R.string.update_permission_missing)
+                }
+            }
+            .setNegativeButton(R.string.update_later, null)
+            .show()
     }
 
     private fun requestNotificationPermissionIfNeeded() {

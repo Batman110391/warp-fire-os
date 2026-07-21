@@ -29,8 +29,8 @@ android {
         applicationId = "com.batman110391.warpfiretv"
         minSdk = 22
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.1.0"
     }
 
     signingConfigs {
@@ -65,6 +65,11 @@ android {
         debug {
             isMinifyEnabled = false
         }
+    }
+
+    buildFeatures {
+        // BuildConfig.VERSION_NAME drives the in-app update check.
+        buildConfig = true
     }
 
     compileOptions {
