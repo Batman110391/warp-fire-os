@@ -72,6 +72,8 @@ class AppUpdater(context: Context) {
     /**
      * Downloads the APK, reporting progress as 0..100, and returns the file.
      *
+     * [onProgress] is invoked on the main thread, so callers can touch views from it.
+     *
      * Below API 24 the installer reads the file directly, so it has to live somewhere
      * world-readable; from API 24 on it arrives through a [FileProvider] grant instead.
      */
@@ -104,7 +106,7 @@ class AppUpdater(context: Context) {
                                 val percent = ((downloaded * 100) / total).toInt().coerceIn(0, 100)
                                 if (percent != lastReported) {
                                     lastReported = percent
-                                    onProgress(percent)
+                                    withContext(Dispatchers.Main) { onProgress(percent) }
                                 }
                             }
                         }

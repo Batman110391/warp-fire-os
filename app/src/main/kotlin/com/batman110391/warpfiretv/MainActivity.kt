@@ -307,18 +307,19 @@ class MainActivity : ComponentActivity() {
         awaitingInstallPermission = false
         busy = true
         actionButton.isEnabled = false
+        modeButton.isEnabled = false
         lifecycleScope.launch {
             val apk = runCatching {
                 updater.download(update) { percent ->
-                    detailView.visibility = View.VISIBLE
-                    detailView.text = getString(R.string.update_downloading, percent)
+                    showDetail(getString(R.string.update_downloading, percent))
                 }
             }.getOrNull()
 
             busy = false
             if (apk == null || !updater.install(apk)) {
-                detailView.text = getString(R.string.update_failed)
+                showDetail(getString(R.string.update_failed))
                 actionButton.isEnabled = true
+                modeButton.isEnabled = true
                 return@launch
             }
             // The system installer is now in front; when it finishes this process is replaced.
@@ -329,8 +330,7 @@ class MainActivity : ComponentActivity() {
     private fun showInstallPermissionDialog() {
         val intent = updater.installPermissionIntent()
         if (intent == null) {
-            detailView.visibility = View.VISIBLE
-            detailView.text = getString(R.string.update_permission_missing)
+            showDetail(getString(R.string.update_permission_missing))
             return
         }
         AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
@@ -350,6 +350,12 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    /** Writes the secondary line and makes sure it is actually on screen. */
+    private fun showDetail(text: String) {
+        detailView.visibility = View.VISIBLE
+        detailView.text = text
     }
 
     private fun showState(state: UiState, detail: String? = null) {
