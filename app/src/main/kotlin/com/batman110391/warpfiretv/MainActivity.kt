@@ -166,16 +166,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkWarpStatus() {
+    private fun checkWarpStatus(allowEnableRetry: Boolean = true) {
         val current = config ?: return
         lifecycleScope.launch {
-            val warp = withContext(Dispatchers.IO) { api.fetchWarpStatus() }
-            val detail = if (warp != null) {
-                getString(R.string.detail_connected_warp, current.addressV4, warp)
-            } else {
-                getString(R.string.detail_connected, current.addressV4)
+            val trace = withContext(Dispatchers.IO) { api.fetchTrace() }
+            if (trace == null) {
+                showState(UiState.CONNECTED, getString(R.string.detail_no_trace))
+                return@launch
             }
-            showState(UiState.CONNECTED, detail)
+
+            val warp = trace["warp"].orEmpty()
+            val egressIp = trace["ip"].orEmpty()
+
+            // warp=off with a working tunnel means the device was never enrolled: retry the PATCH
+            // once, then re-check.
+            if (warp == "off" && allowEnableRetry && registration.enableWarp(current)) {
+                checkWarpStatus(allowEnableRetry = false)
+                return@launch
+            }
+
+            showState(UiState.CONNECTED, getString(R.string.detail_connected, egressIp, warp))
         }
     }
 

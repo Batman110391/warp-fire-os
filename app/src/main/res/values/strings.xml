@@ -11,8 +11,8 @@
     <string name="action_connect">Connect</string>
     <string name="action_disconnect">Disconnect</string>
 
-    <string name="detail_connected">IP %1$s</string>
-    <string name="detail_connected_warp">IP %1$s · warp=%2$s</string>
+    <string name="detail_connected">Exit IP %1$s · warp=%2$s</string>
+    <string name="detail_no_trace">Tunnel up, but cloudflare.com/cdn-cgi/trace is unreachable</string>
 
     <string name="error_registration">Registration failed. Check the network and press Connect to retry.</string>
     <string name="error_connect">Could not start the tunnel. Press Connect to retry.</string>

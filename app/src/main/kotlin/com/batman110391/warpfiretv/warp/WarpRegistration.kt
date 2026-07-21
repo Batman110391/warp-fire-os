@@ -42,6 +42,19 @@ class WarpRegistration(
         throw lastError ?: IllegalStateException("WARP registration failed")
     }
 
+    /**
+     * Re-sends the `warp_enabled` PATCH for an already registered device and reports whether the
+     * server now considers it enabled.
+     *
+     * Used when the tunnel is up but `cdn-cgi/trace` still says `warp=off`: the device exists and
+     * the handshake works, but the enrolment never took.
+     */
+    suspend fun enableWarp(config: WarpConfig): Boolean = withContext(Dispatchers.IO) {
+        if (config.deviceId.isEmpty() || config.accessToken.isEmpty()) return@withContext false
+        runCatching { api.enableWarp(config.deviceId, config.accessToken) }
+        runCatching { api.getDevice(config.deviceId, config.accessToken).warpEnabled }.getOrDefault(false)
+    }
+
     private fun register(): WarpConfig {
         val keyPair = KeyPair()
         val publicKey = keyPair.publicKey.toBase64()
@@ -49,7 +62,8 @@ class WarpRegistration(
         var response = api.register(publicKey, Build.MODEL ?: "Fire TV")
         if (!response.warpEnabled && response.id.isNotEmpty() && response.token.isNotEmpty()) {
             // The consumer app performs this PATCH right after registering; without it the peer
-            // exists but WARP traffic is not enabled for the device.
+            // exists but WARP traffic is not enabled for the device. A failure here is not fatal
+            // for the tunnel itself, so we keep the registration and let the UI retry later.
             response = runCatching { api.enableWarp(response.id, response.token) }.getOrDefault(response)
         }
 

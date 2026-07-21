@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import okhttp3.ConnectionPool
 import okhttp3.ConnectionSpec
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -82,18 +83,38 @@ class WarpApi {
         return json.decodeFromString(execute(request))
     }
 
+    /** Reads back the device record, so we can confirm `warp_enabled` actually stuck. */
+    fun getDevice(deviceId: String, accessToken: String): RegisterResponse {
+        val request = Request.Builder()
+            .url("$BASE_URL/$API_VERSION/reg/$deviceId")
+            .headers(defaultHeaders())
+            .header("Authorization", "Bearer $accessToken")
+            .get()
+            .build()
+        return json.decodeFromString(execute(request))
+    }
+
     /**
-     * Fetches `https://www.cloudflare.com/cdn-cgi/trace` and returns the value of the `warp=` line
-     * (`on`, `off`, `plus`), or null when the check could not be performed.
+     * Fetches `https://www.cloudflare.com/cdn-cgi/trace` and returns its `key=value` lines.
+     *
+     * `warp` is `on`/`plus` when the request reached Cloudflare through an enrolled WARP device,
+     * `off` otherwise; `ip` is the egress address Cloudflare saw, which tells us whether the tunnel
+     * is carrying traffic at all. Returns null when the request itself failed.
+     *
+     * A fresh client is used for every check: connections opened before the tunnel came up would
+     * otherwise be reused and answer from outside it.
      */
-    fun fetchWarpStatus(): String? = try {
+    fun fetchTrace(): Map<String, String>? = try {
+        val traceClient = client.newBuilder().connectionPool(ConnectionPool()).build()
         val request = Request.Builder().url(TRACE_URL).get().build()
-        client.newCall(request).execute().use { response ->
+        traceClient.newCall(request).execute().use { response ->
             response.body.string()
                 .lineSequence()
-                .firstOrNull { it.startsWith("warp=") }
-                ?.substringAfter('=')
-                ?.trim()
+                .mapNotNull { line ->
+                    val separator = line.indexOf('=')
+                    if (separator <= 0) null else line.substring(0, separator) to line.substring(separator + 1).trim()
+                }
+                .toMap()
         }
     } catch (_: Exception) {
         null

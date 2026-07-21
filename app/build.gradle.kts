@@ -29,8 +29,8 @@ android {
         applicationId = "com.batman110391.warpfiretv"
         minSdk = 22
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
     signingConfigs {

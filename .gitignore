@@ -12,3 +12,9 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+.env
+.env.*
+*.b64
+
+# Local Gradle daemon toolchain pin
+gradle/gradle-daemon-jvm.properties
