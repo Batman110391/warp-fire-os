@@ -14,7 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.batman110391.warpfiretv.update.AppUpdater
 import com.batman110391.warpfiretv.update.AvailableUpdate
-import com.batman110391.warpfiretv.vpn.TunnelMode
+import com.batman110391.warpfiretv.vpn.TunnelSettings
 import com.batman110391.warpfiretv.vpn.WireGuardTunnel
 import com.batman110391.warpfiretv.warp.WarpApi
 import com.batman110391.warpfiretv.warp.WarpConfig
@@ -34,7 +34,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusView: TextView
     private lateinit var detailView: TextView
     private lateinit var actionButton: Button
-    private lateinit var modeButton: Button
+    private lateinit var warpButton: Button
+    private lateinit var appsButton: Button
 
     private lateinit var store: WarpConfigStore
     private lateinit var registration: WarpRegistration
@@ -45,7 +46,7 @@ class MainActivity : ComponentActivity() {
 
     private var config: WarpConfig? = null
     private var busy = false
-    private var mode = TunnelMode.WARP
+    private var settings = TunnelSettings()
 
     /** Ask about a given update at most once per app session. */
     private var pendingUpdate: AvailableUpdate? = null
@@ -73,7 +74,8 @@ class MainActivity : ComponentActivity() {
         statusView = findViewById(R.id.status)
         detailView = findViewById(R.id.detail)
         actionButton = findViewById(R.id.action_button)
-        modeButton = findViewById(R.id.mode_button)
+        warpButton = findViewById(R.id.warp_button)
+        appsButton = findViewById(R.id.apps_button)
 
         store = WarpConfigStore(this)
         registration = WarpRegistration(store)
@@ -83,9 +85,10 @@ class MainActivity : ComponentActivity() {
         actionButton.setOnClickListener { onActionPressed() }
         actionButton.requestFocus()
 
-        mode = store.tunnelMode
-        renderModeButton()
-        modeButton.setOnClickListener { onModePressed() }
+        settings = store.tunnelSettings
+        renderSettingsButtons()
+        warpButton.setOnClickListener { onWarpPressed() }
+        appsButton.setOnClickListener { startActivity(Intent(this, AppPickerActivity::class.java)) }
 
         // Hidden reset: long-press the title to wipe the registration and get a new WARP device.
         titleView.setOnLongClickListener {
@@ -102,19 +105,14 @@ class MainActivity : ComponentActivity() {
         checkForUpdate()
     }
 
-    override fun onStop() {
-        super.onStop()
-        android.util.Log.i("WarpUi", "onStop")
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        android.util.Log.i("WarpUi", "onDestroy — lifecycleScope cancelled here")
-    }
-
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch { tunnel.refreshState() }
+
+        // Coming back from the app picker: pick up whatever it saved, and rebuild the tunnel if the
+        // selection actually changed while connected.
+        val stored = store.tunnelSettings
+        if (stored != settings) applySettings(stored)
 
         // Coming back from the "install unknown apps" settings screen: resume where we stopped
         // instead of making the user hunt for the prompt again.
@@ -154,32 +152,44 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun renderModeButton() {
-        modeButton.setText(
-            when (mode) {
-                TunnelMode.WARP -> R.string.mode_warp
-                TunnelMode.DNS_ONLY -> R.string.mode_dns_only
-            },
-        )
+    private fun renderSettingsButtons() {
+        warpButton.setText(if (settings.warpEnabled) R.string.warp_on else R.string.warp_off)
+        appsButton.text = if (settings.includedApps.isEmpty()) {
+            getString(R.string.apps_all)
+        } else {
+            getString(R.string.apps_selected, labelsFor(settings.includedApps))
+        }
+        // The app allowlist only means anything once traffic is actually routed through WARP.
+        appsButton.isEnabled = settings.warpEnabled && !busy
+    }
+
+    /** Human-readable app names, falling back to the package name when it cannot be resolved. */
+    private fun labelsFor(packages: Set<String>): String = packages.joinToString(", ") { name ->
+        runCatching {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(name, 0)).toString()
+        }.getOrDefault(name)
+    }
+
+    private fun onWarpPressed() {
+        if (busy) return
+        applySettings(settings.copy(warpEnabled = !settings.warpEnabled))
     }
 
     /**
-     * Switches routing mode. The mode is baked into the WireGuard config, so an active tunnel has
-     * to be rebuilt for the change to take effect.
+     * Persists new routing settings and, when the tunnel is already up, rebuilds it: routes and the
+     * app allowlist are baked into the WireGuard config and cannot be changed in place.
      */
-    private fun onModePressed() {
-        if (busy) return
-        mode = if (mode == TunnelMode.WARP) TunnelMode.DNS_ONLY else TunnelMode.WARP
-        store.tunnelMode = mode
-        renderModeButton()
+    private fun applySettings(newSettings: TunnelSettings) {
+        settings = newSettings
+        store.tunnelSettings = newSettings
+        renderSettingsButtons()
 
         val current = config
         if (tunnel.state.value == Tunnel.State.UP && current != null) {
             busy = true
             showState(UiState.CONNECTING)
             lifecycleScope.launch {
-                val result = runCatching { tunnel.reconnect(current, mode) }
-                android.util.Log.i("WarpUi", "mode switch result: success=${result.isSuccess} ${result.exceptionOrNull()}")
+                val result = runCatching { tunnel.reconnect(current, settings) }
                 busy = false
                 if (result.isSuccess) {
                     checkWarpStatus()
@@ -219,7 +229,7 @@ class MainActivity : ComponentActivity() {
         }
         showState(UiState.CONNECTING)
         lifecycleScope.launch {
-            runCatching { tunnel.up(current, mode) }
+            runCatching { tunnel.up(current, settings) }
                 .onSuccess {
                     busy = false
                     checkWarpStatus()
@@ -252,9 +262,9 @@ class MainActivity : ComponentActivity() {
             val warp = trace["warp"].orEmpty()
             val egressIp = trace["ip"].orEmpty()
 
-            // In DNS-only mode the traffic deliberately bypasses WARP, so warp=off is the correct
+            // With WARP off the traffic deliberately bypasses it, so warp=off is the correct
             // outcome and there is nothing to enrol.
-            if (mode == TunnelMode.DNS_ONLY) {
+            if (!settings.warpEnabled) {
                 showState(UiState.CONNECTED, getString(R.string.detail_connected_dns, egressIp))
                 return@launch
             }
@@ -318,7 +328,8 @@ class MainActivity : ComponentActivity() {
         awaitingInstallPermission = false
         busy = true
         actionButton.isEnabled = false
-        modeButton.isEnabled = false
+        warpButton.isEnabled = false
+        appsButton.isEnabled = false
         lifecycleScope.launch {
             val apk = runCatching {
                 updater.download(update) { percent ->
@@ -330,7 +341,8 @@ class MainActivity : ComponentActivity() {
             if (apk == null || !updater.install(apk)) {
                 showDetail(getString(R.string.update_failed))
                 actionButton.isEnabled = true
-                modeButton.isEnabled = true
+                warpButton.isEnabled = true
+                renderSettingsButtons()
                 return@launch
             }
             // The system installer is now in front; when it finishes this process is replaced.
@@ -375,7 +387,8 @@ class MainActivity : ComponentActivity() {
         actionButton.setText(if (state == UiState.CONNECTED) R.string.action_disconnect else R.string.action_connect)
         val idle = state != UiState.REGISTERING && state != UiState.CONNECTING
         actionButton.isEnabled = idle
-        modeButton.isEnabled = idle
+        warpButton.isEnabled = idle
+        appsButton.isEnabled = idle && settings.warpEnabled
         detailView.text = detail.orEmpty()
         detailView.visibility = if (detail.isNullOrEmpty()) View.GONE else View.VISIBLE
     }

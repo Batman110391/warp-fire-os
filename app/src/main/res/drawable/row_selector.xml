@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Remotes have no hover: focus must be unmistakable. -->
+<!-- Drawn by the ListView behind the focused row. Rows themselves never take focus, so the
+     highlight cannot live on the row background. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_enabled="false">
-        <shape android:shape="rectangle">
-            <solid android:color="@color/tv_background" />
-            <stroke android:width="2dp" android:color="@color/tv_surface" />
-            <corners android:radius="12dp" />
-        </shape>
-    </item>
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="@color/tv_accent" />
@@ -15,7 +9,7 @@
             <corners android:radius="12dp" />
         </shape>
     </item>
-    <item android:state_pressed="true">
+    <item android:state_selected="true">
         <shape android:shape="rectangle">
             <solid android:color="@color/tv_accent" />
             <corners android:radius="12dp" />
@@ -23,9 +17,7 @@
     </item>
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="@color/tv_surface" />
-            <stroke android:width="2dp" android:color="@color/tv_text_dim" />
-            <corners android:radius="12dp" />
+            <solid android:color="@android:color/transparent" />
         </shape>
     </item>
 </selector>

@@ -11,8 +11,20 @@
     <string name="action_connect">Connect</string>
     <string name="action_disconnect">Disconnect</string>
 
-    <string name="mode_warp">Mode: WARP (full tunnel)</string>
-    <string name="mode_dns_only">Mode: DNS only (1.1.1.1)</string>
+    <string name="warp_on">WARP: ON</string>
+    <string name="warp_off">WARP: OFF (DNS only)</string>
+
+    <string name="apps_all">Apps: all</string>
+    <string name="apps_selected">Apps: %1$s</string>
+
+    <string name="picker_title">Apps routed through WARP</string>
+    <string name="picker_summary_all">None selected — every app uses WARP</string>
+    <plurals name="picker_summary_count">
+        <item quantity="one">%1$d app uses WARP</item>
+        <item quantity="other">%1$d apps use WARP</item>
+    </plurals>
+    <string name="picker_empty">No launchable apps found.</string>
+    <string name="picker_hint">Apps left out keep their normal connection and the router\'s DNS. Restart an app after changing this. Press BACK to return.</string>
 
     <string name="detail_connected">Exit IP %1$s · warp=%2$s</string>
     <string name="detail_connected_dns">DNS only · exit IP %1$s unchanged</string>

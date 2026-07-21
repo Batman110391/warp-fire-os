@@ -12,6 +12,20 @@
          user to confirm. No silent install is possible. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- API 30+ hides other packages unless they are declared here. Without this the app picker
+         sees almost nothing, and the installed-package check would silently drop the very apps the
+         user selected. Only launchable apps are requested — not QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+    </queries>
+
     <!-- Fire TV has no touchscreen and reports leanback: both must be optional or the store /
          launcher can hide the app. -->
     <uses-feature
@@ -42,6 +56,11 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".AppPickerActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
 
         <!-- Grants the system installer read access to the downloaded APK (API 24+). -->
         <provider

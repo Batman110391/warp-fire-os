@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.batman110391.warpfiretv.vpn.TunnelMode
+import com.batman110391.warpfiretv.vpn.TunnelSettings
 
 /**
  * Persisted WARP device configuration.
@@ -69,21 +69,26 @@ class WarpConfigStore(context: Context) {
     }
 
     /**
-     * Selected tunnel mode, as the [TunnelMode] name. Survives [clear] deliberately: wiping the
-     * WARP registration should not silently switch the user back to full tunnel.
+     * Routing preferences. Survives [clear] deliberately: wiping the WARP registration should not
+     * silently change what the tunnel routes.
      */
-    var tunnelMode: TunnelMode
-        get() = runCatching { TunnelMode.valueOf(prefs.getString(KEY_MODE, null) ?: "") }
-            .getOrDefault(TunnelMode.WARP)
+    var tunnelSettings: TunnelSettings
+        get() = TunnelSettings(
+            warpEnabled = prefs.getBoolean(KEY_WARP_ENABLED, false),
+            includedApps = prefs.getStringSet(KEY_INCLUDED_APPS, emptySet()).orEmpty(),
+        )
         set(value) {
-            prefs.edit().putString(KEY_MODE, value.name).apply()
+            prefs.edit()
+                .putBoolean(KEY_WARP_ENABLED, value.warpEnabled)
+                .putStringSet(KEY_INCLUDED_APPS, value.includedApps)
+                .apply()
         }
 
     /** Wipes the stored registration so the next launch registers a brand new WARP device. */
     fun clear() {
-        val mode = tunnelMode
+        val settings = tunnelSettings
         prefs.edit().clear().apply()
-        tunnelMode = mode
+        tunnelSettings = settings
     }
 
     private fun createPrefs(context: Context): SharedPreferences {
@@ -118,6 +123,7 @@ class WarpConfigStore(context: Context) {
         const val KEY_ENDPOINT = "endpoint"
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_ACCESS_TOKEN = "access_token"
-        const val KEY_MODE = "tunnel_mode"
+        const val KEY_WARP_ENABLED = "warp_enabled"
+        const val KEY_INCLUDED_APPS = "included_apps"
     }
 }

@@ -22,18 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * What gets routed into the tunnel.
- *
- * [DNS_ONLY] mirrors what the 1.1.1.1 app calls "1.1.1.1 without WARP": queries reach Cloudflare's
- * resolver over the encrypted tunnel while everything else goes out the normal interface, so the
- * public IP does not change and `cdn-cgi/trace` correctly reports `warp=off`.
- */
-enum class TunnelMode {
-    WARP,
-    DNS_ONLY,
-}
-
-/**
  * Thin wrapper around the official WireGuard [GoBackend] (userspace wireguard-go, no root).
  *
  * MTU 1280, Cloudflare DNS; the routed range depends on the [TunnelMode].
@@ -54,8 +42,8 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
     }
 
     /** Brings the tunnel up. Requires [android.net.VpnService.prepare] to have succeeded first. */
-    suspend fun up(warpConfig: WarpConfig, mode: TunnelMode = TunnelMode.WARP) = withContext(Dispatchers.IO) {
-        val newState = backend.setState(this@WireGuardTunnel, Tunnel.State.UP, buildConfig(warpConfig, mode))
+    suspend fun up(warpConfig: WarpConfig, settings: TunnelSettings) = withContext(Dispatchers.IO) {
+        val newState = backend.setState(this@WireGuardTunnel, Tunnel.State.UP, buildConfig(warpConfig, settings))
         onStateChange(newState)
     }
 
@@ -77,21 +65,21 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
      * So we wait for the teardown to finish before coming back up, and retry a few times in case
      * the service outlives [TEARDOWN_DELAY_MILLIS] on a slow device.
      */
-    suspend fun reconnect(warpConfig: WarpConfig, mode: TunnelMode) {
-        Log.i(TAG, "reconnect($mode): taking tunnel down")
+    suspend fun reconnect(warpConfig: WarpConfig, settings: TunnelSettings) {
+        Log.i(TAG, "reconnect(warp=${settings.warpEnabled}, apps=${settings.includedApps.size}): down")
         down()
-        Log.i(TAG, "reconnect($mode): down done, waiting for service teardown")
+        Log.i(TAG, "reconnect: down done, waiting for service teardown")
         delay(TEARDOWN_DELAY_MILLIS)
         var lastError: Exception? = null
         repeat(UP_ATTEMPTS) { attempt ->
             try {
-                Log.i(TAG, "reconnect($mode): up attempt ${attempt + 1}")
-                up(warpConfig, mode)
-                Log.i(TAG, "reconnect($mode): up succeeded")
+                Log.i(TAG, "reconnect: up attempt ${attempt + 1}")
+                up(warpConfig, settings)
+                Log.i(TAG, "reconnect: up succeeded")
                 return
             } catch (e: Exception) {
                 lastError = e
-                Log.w(TAG, "reconnect($mode): up attempt ${attempt + 1} failed: $e")
+                Log.w(TAG, "reconnect: up attempt ${attempt + 1} failed: $e")
                 if (attempt < UP_ATTEMPTS - 1) delay(RETRY_DELAY_MILLIS)
             }
         }
@@ -103,26 +91,40 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
         onStateChange(backend.getState(this@WireGuardTunnel))
     }
 
-    private fun buildConfig(warpConfig: WarpConfig, mode: TunnelMode): Config {
-        val iface = Interface.Builder()
+    private fun buildConfig(warpConfig: WarpConfig, settings: TunnelSettings): Config {
+        val ifaceBuilder = Interface.Builder()
             .parsePrivateKey(warpConfig.privateKey)
             .parseAddresses("${warpConfig.addressV4}, ${warpConfig.addressV6}")
             .parseDnsServers(DNS_SERVERS)
             .setMtu(MTU)
-            .build()
+
+        if (settings.isPerApp) {
+            // Our own package goes in too: the cdn-cgi/trace check runs in this process, and from
+            // outside the tunnel it would report warp=off while the tunnel is working perfectly.
+            // Uninstalled packages are dropped, because addAllowedApplication throws on them and
+            // that would stop the tunnel from coming up at all.
+            val apps = (settings.includedApps + appContext.packageName).filter { isInstalled(it) }
+            Log.i(TAG, "per-app tunnel for ${apps.size} package(s)")
+            ifaceBuilder.includeApplications(apps)
+        }
+
         val peer = Peer.Builder()
             .parsePublicKey(warpConfig.peerPublicKey)
             .parseEndpoint(warpConfig.endpoint)
-            .parseAllowedIPs(
-                when (mode) {
-                    TunnelMode.WARP -> ALLOWED_IPS_FULL
-                    TunnelMode.DNS_ONLY -> ALLOWED_IPS_DNS_ONLY
-                },
-            )
+            .parseAllowedIPs(if (settings.warpEnabled) ALLOWED_IPS_FULL else ALLOWED_IPS_DNS_ONLY)
             .setPersistentKeepalive(PERSISTENT_KEEPALIVE)
             .build()
-        return Config.Builder().setInterface(iface).addPeer(peer).build()
+        return Config.Builder().setInterface(ifaceBuilder.build()).addPeer(peer).build()
     }
+
+    /**
+     * Checked one package at a time rather than against `getInstalledApplications()`, whose result
+     * is subject to API 30 package-visibility filtering and would report selected apps as missing.
+     */
+    private fun isInstalled(packageName: String): Boolean = runCatching {
+        appContext.packageManager.getApplicationInfo(packageName, 0)
+        true
+    }.getOrDefault(false)
 
     private fun notificationManager() =
         appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

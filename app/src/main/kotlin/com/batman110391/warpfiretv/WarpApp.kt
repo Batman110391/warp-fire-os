@@ -21,7 +21,7 @@ class WarpApp : Application() {
             scope.launch {
                 val store = WarpConfigStore(this@WarpApp)
                 val config = store.load() ?: return@launch
-                runCatching { WireGuardTunnel.getInstance(this@WarpApp).up(config, store.tunnelMode) }
+                runCatching { WireGuardTunnel.getInstance(this@WarpApp).up(config, store.tunnelSettings) }
             }
         }
     }
