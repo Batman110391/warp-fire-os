@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WarpFireTv" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/tv_background</item>
+        <item name="android:colorAccent">@color/tv_accent</item>
+    </style>
+</resources>

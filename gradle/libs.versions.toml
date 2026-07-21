@@ -1,0 +1,30 @@
+[versions]
+# Verified against dl.google.com/dl/android/maven2 and repo1.maven.org (July 2026).
+agp = "9.3.0"
+kotlin = "2.4.10"
+coroutines = "1.11.0"
+serializationJson = "1.11.0"
+okhttp = "5.4.0"
+securityCrypto = "1.1.0"
+# 1.0.20260102 is newer but raised its own minSdk to 24, which would drop Fire OS 5 sticks.
+wireguard = "1.0.20251231"
+coreKtx = "1.17.0"
+activity = "1.11.0"
+lifecycle = "2.9.4"
+constraintlayout = "2.2.1"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-constraintlayout ={ module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+wireguard-tunnel = { module = "com.wireguard.android:tunnel", version.ref = "wireguard" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

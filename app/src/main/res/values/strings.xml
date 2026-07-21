@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WARP for Fire TV</string>
+
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_registering">Registering…</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_error">Error</string>
+
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
+
+    <string name="detail_connected">IP %1$s</string>
+    <string name="detail_connected_warp">IP %1$s · warp=%2$s</string>
+
+    <string name="error_registration">Registration failed. Check the network and press Connect to retry.</string>
+    <string name="error_connect">Could not start the tunnel. Press Connect to retry.</string>
+    <string name="error_vpn_permission">VPN permission denied. Press Connect and accept the system dialog.</string>
+
+    <string name="hint_reset">Long-press the title to reset the WARP registration</string>
+
+    <string name="notification_channel_name">WARP tunnel</string>
+    <string name="notification_connected">Tunnel active</string>
+    <string name="fgs_special_use">WireGuard VPN tunnel managed by the user</string>
+</resources>
