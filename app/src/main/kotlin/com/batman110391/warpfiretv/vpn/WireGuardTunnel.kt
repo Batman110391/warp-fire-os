@@ -14,6 +14,7 @@ import com.wireguard.config.Config
 import com.wireguard.config.Interface
 import com.wireguard.config.Peer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,6 +61,35 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
     suspend fun down() = withContext(Dispatchers.IO) {
         val newState = backend.setState(this@WireGuardTunnel, Tunnel.State.DOWN, null)
         onStateChange(newState)
+    }
+
+    /**
+     * Rebuilds the tunnel with a different [mode].
+     *
+     * Bringing the tunnel down calls `stopSelf()` on the backend's VpnService, which is
+     * asynchronous. Calling [up] straight afterwards races that teardown: the backend still sees a
+     * completed `vpnService` future, hands back the dying service, establishes the new tunnel on
+     * it, and then the pending `onDestroy` runs `wgTurnOff` on the handle of the tunnel that was
+     * just created — a native call against a tun fd that is already gone, which takes the process
+     * with it.
+     *
+     * So we wait for the teardown to finish before coming back up, and retry a few times in case
+     * the service outlives [TEARDOWN_DELAY_MILLIS] on a slow device.
+     */
+    suspend fun reconnect(warpConfig: WarpConfig, mode: TunnelMode) {
+        down()
+        delay(TEARDOWN_DELAY_MILLIS)
+        var lastError: Exception? = null
+        repeat(UP_ATTEMPTS) { attempt ->
+            try {
+                up(warpConfig, mode)
+                return
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < UP_ATTEMPTS - 1) delay(RETRY_DELAY_MILLIS)
+            }
+        }
+        throw lastError ?: IllegalStateException("Could not bring the tunnel back up")
     }
 
     /** Reads the live backend state, e.g. after the system started us as an always-on VPN. */
@@ -136,6 +166,11 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
             "1.1.1.1/32, 1.0.0.1/32, 2606:4700:4700::1111/128, 2606:4700:4700::1001/128"
 
         private const val DNS_SERVERS = "1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001"
+
+        /** Long enough for the VpnService to reach onDestroy and reset the backend's future. */
+        private const val TEARDOWN_DELAY_MILLIS = 1_500L
+        private const val UP_ATTEMPTS = 3
+        private const val RETRY_DELAY_MILLIS = 1_000L
 
         private const val CHANNEL_ID = "warp_tunnel"
         private const val NOTIFICATION_ID = 1

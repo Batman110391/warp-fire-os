@@ -163,13 +163,18 @@ class MainActivity : ComponentActivity() {
         store.tunnelMode = mode
         renderModeButton()
 
-        if (tunnel.state.value == Tunnel.State.UP) {
+        val current = config
+        if (tunnel.state.value == Tunnel.State.UP && current != null) {
             busy = true
             showState(UiState.CONNECTING)
             lifecycleScope.launch {
-                runCatching { tunnel.down() }
+                val result = runCatching { tunnel.reconnect(current, mode) }
                 busy = false
-                connect()
+                if (result.isSuccess) {
+                    checkWarpStatus()
+                } else {
+                    showState(UiState.ERROR, getString(R.string.error_connect))
+                }
             }
         }
     }
