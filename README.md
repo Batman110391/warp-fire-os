@@ -145,8 +145,7 @@ guessing them:
 | TLS | pinned to 1.2, like the official client (otherwise HTTP 403 / error 1020) |
 
 The private key is generated on device by the WireGuard library, stored in
-`EncryptedSharedPreferences` (plain app-private preferences on API 22, where the keystore-backed
-master key is unavailable) and never logged, exported or sent anywhere.
+`EncryptedSharedPreferences` and never logged, exported or sent anywhere.
 
 Registration is idempotent: a stored config short-circuits all network calls, so restarts never
 re-register. Failures retry three times with exponential backoff and surface as an `Error` state
@@ -196,11 +195,18 @@ with manual retry.
 | Android Gradle Plugin | 9.3.0 | |
 | Gradle | 9.6.1 | |
 | Kotlin | 2.4.10 | |
-| `com.wireguard.android:tunnel` | 1.0.20251231 | 1.0.20260102 raised its minSdk to 24, which would drop Fire OS 5 devices |
+| `com.wireguard.android:tunnel` | 1.0.20260102 | see below — earlier versions crash on disconnect |
 | OkHttp | 5.4.0 | |
 | `androidx.security:security-crypto` | 1.1.0 | |
 | kotlinx.serialization | 1.11.0 | |
-| compileSdk / targetSdk / minSdk | 37 / 37 / 22 | |
+| compileSdk / targetSdk / minSdk | 37 / 37 / 24 | see below |
+
+**Why minSdk is 24 and not 22.** Every release of `com.wireguard.android:tunnel` up to and including
+`1.0.20251231` calls `CompletableFuture.newIncompleteFuture()` unguarded in
+`GoBackend.VpnService.onDestroy`. That method only exists from API 31, so bringing the tunnel down
+threw `NoSuchMethodError` and killed the process on every device below Android 12 — reproduced on
+Fire OS 8 (API 30). `1.0.20260102` adds the `SDK_INT` guard and is the only working version; it
+requires minSdk 24. So API 22–23 support was never real, and Fire OS 6 (API 25) upwards is covered.
 
 `android.builtInKotlin=false` and `android.newDsl=false` are set in `gradle.properties`: AGP 9's
 bundled Kotlin support is incompatible with applying the standalone Kotlin Gradle Plugin, which is

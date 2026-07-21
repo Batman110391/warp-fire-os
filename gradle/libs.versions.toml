@@ -6,8 +6,11 @@ coroutines = "1.11.0"
 serializationJson = "1.11.0"
 okhttp = "5.4.0"
 securityCrypto = "1.1.0"
-# 1.0.20260102 is newer but raised its own minSdk to 24, which would drop Fire OS 5 sticks.
-wireguard = "1.0.20251231"
+# Every version before 1.0.20260102 calls CompletableFuture.newIncompleteFuture() unguarded in
+# GoBackend.VpnService.onDestroy. That method only exists from API 31, so bringing the tunnel down
+# crashed the process on every device below Android 12 (verified on Fire OS 8 / API 30).
+# 1.0.20260102 adds the SDK_INT guard and raises its own minSdk to 24, which forces ours to 24 too.
+wireguard = "1.0.20260102"
 coreKtx = "1.17.0"
 activity = "1.11.0"
 lifecycle = "2.9.4"

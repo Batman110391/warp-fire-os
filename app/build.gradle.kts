@@ -49,7 +49,10 @@ android {
 
     defaultConfig {
         applicationId = "com.batman110391.warpfiretv"
-        minSdk = 22
+        // SPEC asks for 22, but no published version of com.wireguard.android:tunnel works below
+        // Android 12 except 1.0.20260102, which itself requires 24. Fire OS 6 is API 25, so only
+        // Fire OS 5 devices are actually lost — and those crashed on disconnect anyway.
+        minSdk = 24
         targetSdk = 37
         versionCode = resolvedVersionCode
         versionName = resolvedVersionName

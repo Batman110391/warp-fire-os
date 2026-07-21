@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.batman110391.warpfiretv.R
 import com.batman110391.warpfiretv.warp.WarpConfig
 import com.wireguard.android.backend.Backend
@@ -77,15 +78,20 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
      * the service outlives [TEARDOWN_DELAY_MILLIS] on a slow device.
      */
     suspend fun reconnect(warpConfig: WarpConfig, mode: TunnelMode) {
+        Log.i(TAG, "reconnect($mode): taking tunnel down")
         down()
+        Log.i(TAG, "reconnect($mode): down done, waiting for service teardown")
         delay(TEARDOWN_DELAY_MILLIS)
         var lastError: Exception? = null
         repeat(UP_ATTEMPTS) { attempt ->
             try {
+                Log.i(TAG, "reconnect($mode): up attempt ${attempt + 1}")
                 up(warpConfig, mode)
+                Log.i(TAG, "reconnect($mode): up succeeded")
                 return
             } catch (e: Exception) {
                 lastError = e
+                Log.w(TAG, "reconnect($mode): up attempt ${attempt + 1} failed: $e")
                 if (attempt < UP_ATTEMPTS - 1) delay(RETRY_DELAY_MILLIS)
             }
         }
@@ -157,6 +163,9 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
 
     companion object {
         const val TUNNEL_NAME = "warp"
+
+        /** Never used for anything carrying a key, an address or a token. */
+        private const val TAG = "WarpTunnel"
         private const val MTU = 1280
         private const val PERSISTENT_KEEPALIVE = 25
         private const val ALLOWED_IPS_FULL = "0.0.0.0/0, ::/0"

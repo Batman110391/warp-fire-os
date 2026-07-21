@@ -102,6 +102,16 @@ class MainActivity : ComponentActivity() {
         checkForUpdate()
     }
 
+    override fun onStop() {
+        super.onStop()
+        android.util.Log.i("WarpUi", "onStop")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        android.util.Log.i("WarpUi", "onDestroy — lifecycleScope cancelled here")
+    }
+
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch { tunnel.refreshState() }
@@ -169,6 +179,7 @@ class MainActivity : ComponentActivity() {
             showState(UiState.CONNECTING)
             lifecycleScope.launch {
                 val result = runCatching { tunnel.reconnect(current, mode) }
+                android.util.Log.i("WarpUi", "mode switch result: success=${result.isSuccess} ${result.exceptionOrNull()}")
                 busy = false
                 if (result.isSuccess) {
                     checkWarpStatus()
