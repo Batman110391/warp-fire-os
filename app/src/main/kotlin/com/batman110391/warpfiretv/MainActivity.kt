@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            tunnel.state.collect { state -> onTunnelStateChanged(state) }
+            tunnel.state.collect { renderTunnelState() }
         }
 
         requestNotificationPermissionIfNeeded()
@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 .onSuccess {
                     config = it
                     busy = false
-                    if (tunnel.state.value != Tunnel.State.UP) showState(UiState.DISCONNECTED)
+                    renderTunnelState()
                 }
                 .onFailure {
                     busy = false
@@ -189,11 +189,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onTunnelStateChanged(state: Tunnel.State) {
+    /**
+     * Single place that decides what the screen shows once no operation is in flight.
+     *
+     * Called both when the tunnel state changes and when a long-running step finishes, so
+     * re-entering the Activity while the tunnel is already up cannot leave a stale label on screen.
+     */
+    private fun renderTunnelState() {
         if (busy) return
-        when (state) {
-            Tunnel.State.UP -> if (statusView.tag != UiState.CONNECTED) checkWarpStatus()
-            else -> if (statusView.tag == UiState.CONNECTED) showState(UiState.DISCONNECTED)
+        if (tunnel.state.value == Tunnel.State.UP) {
+            // Already showing CONNECTED means the trace was fetched for this session; a second
+            // fetch would only cost a round trip.
+            if (statusView.tag != UiState.CONNECTED) checkWarpStatus()
+        } else {
+            showState(UiState.DISCONNECTED)
         }
     }
 
