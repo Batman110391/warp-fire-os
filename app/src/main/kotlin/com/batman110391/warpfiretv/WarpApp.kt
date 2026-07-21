@@ -19,8 +19,9 @@ class WarpApp : Application() {
         // system "always-on VPN": no Activity is involved, so bring the tunnel up ourselves.
         GoBackend.setAlwaysOnCallback {
             scope.launch {
-                val config = WarpConfigStore(this@WarpApp).load() ?: return@launch
-                runCatching { WireGuardTunnel.getInstance(this@WarpApp).up(config) }
+                val store = WarpConfigStore(this@WarpApp)
+                val config = store.load() ?: return@launch
+                runCatching { WireGuardTunnel.getInstance(this@WarpApp).up(config, store.tunnelMode) }
             }
         }
     }

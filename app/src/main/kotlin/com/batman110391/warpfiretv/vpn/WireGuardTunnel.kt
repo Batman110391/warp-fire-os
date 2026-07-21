@@ -20,9 +20,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
+ * What gets routed into the tunnel.
+ *
+ * [DNS_ONLY] mirrors what the 1.1.1.1 app calls "1.1.1.1 without WARP": queries reach Cloudflare's
+ * resolver over the encrypted tunnel while everything else goes out the normal interface, so the
+ * public IP does not change and `cdn-cgi/trace` correctly reports `warp=off`.
+ */
+enum class TunnelMode {
+    WARP,
+    DNS_ONLY,
+}
+
+/**
  * Thin wrapper around the official WireGuard [GoBackend] (userspace wireguard-go, no root).
  *
- * Full tunnel only: `AllowedIPs = 0.0.0.0/0, ::/0`, MTU 1280, Cloudflare DNS.
+ * MTU 1280, Cloudflare DNS; the routed range depends on the [TunnelMode].
  */
 class WireGuardTunnel private constructor(context: Context) : Tunnel {
 
@@ -40,8 +52,8 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
     }
 
     /** Brings the tunnel up. Requires [android.net.VpnService.prepare] to have succeeded first. */
-    suspend fun up(warpConfig: WarpConfig) = withContext(Dispatchers.IO) {
-        val newState = backend.setState(this@WireGuardTunnel, Tunnel.State.UP, buildConfig(warpConfig))
+    suspend fun up(warpConfig: WarpConfig, mode: TunnelMode = TunnelMode.WARP) = withContext(Dispatchers.IO) {
+        val newState = backend.setState(this@WireGuardTunnel, Tunnel.State.UP, buildConfig(warpConfig, mode))
         onStateChange(newState)
     }
 
@@ -55,7 +67,7 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
         onStateChange(backend.getState(this@WireGuardTunnel))
     }
 
-    private fun buildConfig(warpConfig: WarpConfig): Config {
+    private fun buildConfig(warpConfig: WarpConfig, mode: TunnelMode): Config {
         val iface = Interface.Builder()
             .parsePrivateKey(warpConfig.privateKey)
             .parseAddresses("${warpConfig.addressV4}, ${warpConfig.addressV6}")
@@ -65,7 +77,12 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
         val peer = Peer.Builder()
             .parsePublicKey(warpConfig.peerPublicKey)
             .parseEndpoint(warpConfig.endpoint)
-            .parseAllowedIPs(ALLOWED_IPS)
+            .parseAllowedIPs(
+                when (mode) {
+                    TunnelMode.WARP -> ALLOWED_IPS_FULL
+                    TunnelMode.DNS_ONLY -> ALLOWED_IPS_DNS_ONLY
+                },
+            )
             .setPersistentKeepalive(PERSISTENT_KEEPALIVE)
             .build()
         return Config.Builder().setInterface(iface).addPeer(peer).build()
@@ -112,7 +129,12 @@ class WireGuardTunnel private constructor(context: Context) : Tunnel {
         const val TUNNEL_NAME = "warp"
         private const val MTU = 1280
         private const val PERSISTENT_KEEPALIVE = 25
-        private const val ALLOWED_IPS = "0.0.0.0/0, ::/0"
+        private const val ALLOWED_IPS_FULL = "0.0.0.0/0, ::/0"
+
+        /** Just the resolver addresses, so only DNS traffic is routed into the tunnel. */
+        private const val ALLOWED_IPS_DNS_ONLY =
+            "1.1.1.1/32, 1.0.0.1/32, 2606:4700:4700::1111/128, 2606:4700:4700::1001/128"
+
         private const val DNS_SERVERS = "1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001"
 
         private const val CHANNEL_ID = "warp_tunnel"

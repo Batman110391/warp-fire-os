@@ -11,7 +11,11 @@
     <string name="action_connect">Connect</string>
     <string name="action_disconnect">Disconnect</string>
 
+    <string name="mode_warp">Mode: WARP (full tunnel)</string>
+    <string name="mode_dns_only">Mode: DNS only (1.1.1.1)</string>
+
     <string name="detail_connected">Exit IP %1$s · warp=%2$s</string>
+    <string name="detail_connected_dns">DNS only · exit IP %1$s unchanged</string>
     <string name="detail_no_trace">Tunnel up, but cloudflare.com/cdn-cgi/trace is unreachable</string>
 
     <string name="error_registration">Registration failed. Check the network and press Connect to retry.</string>

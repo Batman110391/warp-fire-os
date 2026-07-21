@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.batman110391.warpfiretv.vpn.TunnelMode
 
 /**
  * Persisted WARP device configuration.
@@ -67,9 +68,22 @@ class WarpConfigStore(context: Context) {
             .apply()
     }
 
+    /**
+     * Selected tunnel mode, as the [TunnelMode] name. Survives [clear] deliberately: wiping the
+     * WARP registration should not silently switch the user back to full tunnel.
+     */
+    var tunnelMode: TunnelMode
+        get() = runCatching { TunnelMode.valueOf(prefs.getString(KEY_MODE, null) ?: "") }
+            .getOrDefault(TunnelMode.WARP)
+        set(value) {
+            prefs.edit().putString(KEY_MODE, value.name).apply()
+        }
+
     /** Wipes the stored registration so the next launch registers a brand new WARP device. */
     fun clear() {
+        val mode = tunnelMode
         prefs.edit().clear().apply()
+        tunnelMode = mode
     }
 
     private fun createPrefs(context: Context): SharedPreferences {
@@ -104,5 +118,6 @@ class WarpConfigStore(context: Context) {
         const val KEY_ENDPOINT = "endpoint"
         const val KEY_DEVICE_ID = "device_id"
         const val KEY_ACCESS_TOKEN = "access_token"
+        const val KEY_MODE = "tunnel_mode"
     }
 }

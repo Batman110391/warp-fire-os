@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import com.batman110391.warpfiretv.update.AppUpdater
 import com.batman110391.warpfiretv.update.AvailableUpdate
+import com.batman110391.warpfiretv.vpn.TunnelMode
 import com.batman110391.warpfiretv.vpn.WireGuardTunnel
 import com.batman110391.warpfiretv.warp.WarpApi
 import com.batman110391.warpfiretv.warp.WarpConfig
@@ -33,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var statusView: TextView
     private lateinit var detailView: TextView
     private lateinit var actionButton: Button
+    private lateinit var modeButton: Button
 
     private lateinit var store: WarpConfigStore
     private lateinit var registration: WarpRegistration
@@ -43,6 +45,7 @@ class MainActivity : ComponentActivity() {
 
     private var config: WarpConfig? = null
     private var busy = false
+    private var mode = TunnelMode.WARP
 
     /** Ask about a given update at most once per app session. */
     private var pendingUpdate: AvailableUpdate? = null
@@ -70,6 +73,7 @@ class MainActivity : ComponentActivity() {
         statusView = findViewById(R.id.status)
         detailView = findViewById(R.id.detail)
         actionButton = findViewById(R.id.action_button)
+        modeButton = findViewById(R.id.mode_button)
 
         store = WarpConfigStore(this)
         registration = WarpRegistration(store)
@@ -78,6 +82,10 @@ class MainActivity : ComponentActivity() {
 
         actionButton.setOnClickListener { onActionPressed() }
         actionButton.requestFocus()
+
+        mode = store.tunnelMode
+        renderModeButton()
+        modeButton.setOnClickListener { onModePressed() }
 
         // Hidden reset: long-press the title to wipe the registration and get a new WARP device.
         titleView.setOnLongClickListener {
@@ -136,6 +144,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun renderModeButton() {
+        modeButton.setText(
+            when (mode) {
+                TunnelMode.WARP -> R.string.mode_warp
+                TunnelMode.DNS_ONLY -> R.string.mode_dns_only
+            },
+        )
+    }
+
+    /**
+     * Switches routing mode. The mode is baked into the WireGuard config, so an active tunnel has
+     * to be rebuilt for the change to take effect.
+     */
+    private fun onModePressed() {
+        if (busy) return
+        mode = if (mode == TunnelMode.WARP) TunnelMode.DNS_ONLY else TunnelMode.WARP
+        store.tunnelMode = mode
+        renderModeButton()
+
+        if (tunnel.state.value == Tunnel.State.UP) {
+            busy = true
+            showState(UiState.CONNECTING)
+            lifecycleScope.launch {
+                runCatching { tunnel.down() }
+                busy = false
+                connect()
+            }
+        }
+    }
+
     private fun onActionPressed() {
         if (busy) return
         when {
@@ -165,7 +203,7 @@ class MainActivity : ComponentActivity() {
         }
         showState(UiState.CONNECTING)
         lifecycleScope.launch {
-            runCatching { tunnel.up(current) }
+            runCatching { tunnel.up(current, mode) }
                 .onSuccess {
                     busy = false
                     checkWarpStatus()
@@ -197,6 +235,13 @@ class MainActivity : ComponentActivity() {
 
             val warp = trace["warp"].orEmpty()
             val egressIp = trace["ip"].orEmpty()
+
+            // In DNS-only mode the traffic deliberately bypasses WARP, so warp=off is the correct
+            // outcome and there is nothing to enrol.
+            if (mode == TunnelMode.DNS_ONLY) {
+                showState(UiState.CONNECTED, getString(R.string.detail_connected_dns, egressIp))
+                return@launch
+            }
 
             // warp=off with a working tunnel means the device was never enrolled: retry the PATCH
             // once, then re-check.
@@ -306,7 +351,9 @@ class MainActivity : ComponentActivity() {
         statusView.tag = state
         statusView.setText(state.labelRes)
         actionButton.setText(if (state == UiState.CONNECTED) R.string.action_disconnect else R.string.action_connect)
-        actionButton.isEnabled = state != UiState.REGISTERING && state != UiState.CONNECTING
+        val idle = state != UiState.REGISTERING && state != UiState.CONNECTING
+        actionButton.isEnabled = idle
+        modeButton.isEnabled = idle
         detailView.text = detail.orEmpty()
         detailView.visibility = if (detail.isNullOrEmpty()) View.GONE else View.VISIBLE
     }

@@ -21,6 +21,28 @@ val hasReleaseSigning = !keystoreBase64.isNullOrBlank() &&
     !signingKeyAlias.isNullOrBlank() &&
     !signingKeyPassword.isNullOrBlank()
 
+/**
+ * On a tag build the version comes from the tag itself, so the tag the in-app updater compares
+ * against can never disagree with the version baked into the APK. Local and `workflow_dispatch`
+ * builds fall back to [devVersionName].
+ */
+val devVersionName = "1.2.0"
+val tagVersionName: String? = System.getenv("GITHUB_REF_NAME")
+    ?.takeIf { it.startsWith("v") }
+    ?.removePrefix("v")
+    ?.takeIf { it.isNotEmpty() && it.all { char -> char.isDigit() || char == '.' } }
+val resolvedVersionName = tagVersionName ?: devVersionName
+
+/** major*10000 + minor*100 + patch, so version codes stay ordered as versions grow. */
+val resolvedVersionCode = resolvedVersionName.split('.')
+    .map { it.toIntOrNull() ?: 0 }
+    .let { parts ->
+        val major = parts.getOrElse(0) { 0 }
+        val minor = parts.getOrElse(1) { 0 }
+        val patch = parts.getOrElse(2) { 0 }
+        major * 10_000 + minor * 100 + patch
+    }
+
 android {
     namespace = "com.batman110391.warpfiretv"
     compileSdk = 37
@@ -29,8 +51,8 @@ android {
         applicationId = "com.batman110391.warpfiretv"
         minSdk = 22
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.1.0"
+        versionCode = resolvedVersionCode
+        versionName = resolvedVersionName
     }
 
     signingConfigs {

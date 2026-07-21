@@ -5,10 +5,16 @@ Minimal Cloudflare WARP client for Amazon Fire TV: install the APK, open the app
 independent WARP device on first launch (the same thing `wgcf` does, but in-process) and brings up
 a full-tunnel WireGuard connection.
 
-- Full tunnel only (`AllowedIPs = 0.0.0.0/0, ::/0`), MTU 1280, Cloudflare DNS.
-- One screen, one button, fully D-pad navigable.
+- Two routing modes, switchable with the remote:
+  - **WARP** — full tunnel (`AllowedIPs = 0.0.0.0/0, ::/0`), your exit IP becomes Cloudflare's.
+  - **DNS only** — only the resolver addresses are routed into the tunnel, like "1.1.1.1 without
+    WARP" in the official app. DNS is encrypted, everything else goes out normally and your public
+    IP does not change. `warp=off` is the expected result in this mode.
+- MTU 1280, Cloudflare DNS (`1.1.1.1`, `1.0.0.1` + IPv6).
+- One screen, fully D-pad navigable.
 - Userspace WireGuard (`wireguard-go` via the official `com.wireguard.android:tunnel` library) — no root.
-- No MASQUE, no proxy mode, no split tunnel, no accounts, no telemetry.
+- In-app update from GitHub Releases.
+- No MASQUE, no proxy mode, no accounts, no telemetry.
 
 ---
 
@@ -34,6 +40,19 @@ The asset name `warp-firetv.apk` is stable across releases, so the URL above nev
 
 When connected the app shows the assigned IP and the result of
 `https://www.cloudflare.com/cdn-cgi/trace`; `warp=on` means traffic is going through WARP.
+
+### Updating
+
+On launch the app asks GitHub for the latest release tag and, if it is newer than the running
+build, offers to download and install it. The download uses the stable `warp-firetv.apk` asset; the
+system installer always asks you to confirm.
+
+The check reads the tag from the redirect `/releases/latest` issues towards `/releases/tag/vX.Y.Z`
+rather than calling the GitHub API, whose unauthenticated quota is 60 requests per hour **per IP** —
+with the tunnel up, that IP is shared with every other WARP user on the same egress address.
+
+On Fire OS you may need to allow this app under *Install unknown apps* the first time; the app
+routes you to that settings screen and resumes when you come back.
 
 ### Resetting
 
@@ -99,9 +118,14 @@ Release as `warp-firetv.apk`.
 Cut a release with:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
+
+**The tag is the version.** On a tag build `versionName` comes from `GITHUB_REF_NAME`, and
+`versionCode` is derived from it as `major*10000 + minor*100 + patch`. Nothing to bump by hand, and
+the tag the updater compares against can never disagree with the version inside the APK. Local and
+`workflow_dispatch` builds fall back to `devVersionName` in `app/build.gradle.kts`.
 
 ---
 
