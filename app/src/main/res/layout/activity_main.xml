@@ -1,22 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ScrollView so the button column always fits, whatever the TV's overscan and density. The
-     D-pad scrolls it automatically as focus moves between buttons. -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Split layout: a status "hero" panel on the left uses the TV's width, the controls stack on the
+     right. No scrolling; only the right column takes D-pad focus. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/tv_background"
-    android:fillViewport="true"
-    android:scrollbars="none">
+    android:baselineAligned="false"
+    android:orientation="horizontal"
+    android:paddingStart="56dp"
+    android:paddingEnd="56dp"
+    android:paddingTop="40dp"
+    android:paddingBottom="40dp">
 
+    <!-- Hero panel -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.1"
+        android:gravity="center_vertical"
         android:orientation="vertical"
-        android:paddingStart="48dp"
-        android:paddingEnd="48dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="32dp">
+        android:paddingEnd="40dp">
 
         <TextView
             android:id="@+id/title"
@@ -25,31 +28,74 @@
             android:longClickable="true"
             android:text="@string/app_name"
             android:textColor="@color/tv_text"
-            android:textSize="36sp" />
+            android:textSize="56sp"
+            android:textStyle="bold"
+            android:letterSpacing="-0.02" />
 
-        <TextView
-            android:id="@+id/status"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="@string/status_disconnected"
-            android:textColor="@color/tv_text_dim"
-            android:textSize="26sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/status_dot"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:background="@drawable/status_dot" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/status_disconnected"
+                android:textColor="@color/tv_text_dim"
+                android:textSize="22sp" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/detail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
+            android:fontFamily="monospace"
             android:textColor="@color/tv_text_dim"
             android:textSize="18sp"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/warp_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/badge_background"
+            android:fontFamily="monospace"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
+            android:text="@string/badge_warp_on"
+            android:textColor="@color/tv_verified"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Controls -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.9"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
         <Button
             android:id="@+id/warp_button"
-            android:layout_width="360dp"
-            android:layout_height="60dp"
-            android:layout_marginTop="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
             android:background="@drawable/button_background"
             android:focusable="true"
             android:text="@string/warp_off"
@@ -58,46 +104,55 @@
 
         <Button
             android:id="@+id/apps_button"
-            android:layout_width="360dp"
-            android:layout_height="60dp"
-            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/button_background"
+            android:ellipsize="end"
             android:focusable="true"
+            android:maxLines="1"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:text="@string/apps_all"
             android:textColor="@color/tv_text"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/autoconnect_button"
-            android:layout_width="360dp"
-            android:layout_height="60dp"
-            android:layout_marginTop="10dp"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/button_background"
+            android:ellipsize="end"
             android:focusable="true"
+            android:maxLines="1"
             android:text="@string/autoconnect_on"
             android:textColor="@color/tv_text"
             android:textSize="18sp" />
 
         <Button
             android:id="@+id/action_button"
-            android:layout_width="360dp"
-            android:layout_height="88dp"
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
             android:layout_marginTop="20dp"
             android:background="@drawable/button_background"
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:text="@string/action_connect"
             android:textColor="@color/tv_text"
-            android:textSize="26sp" />
+            android:textSize="26sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="18dp"
+            android:gravity="center"
             android:text="@string/hint_reset"
             android:textColor="@color/tv_text_dim"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
     </LinearLayout>
 
-</ScrollView>
+</LinearLayout>

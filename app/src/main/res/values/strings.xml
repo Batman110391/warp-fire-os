@@ -1,57 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">WARP for Fire TV</string>
+    <string name="app_name">WARP+</string>
 
-    <string name="status_disconnected">Disconnected</string>
-    <string name="status_registering">Registering…</string>
-    <string name="status_connecting">Connecting…</string>
-    <string name="status_connected">Connected</string>
-    <string name="status_error">Error</string>
+    <string name="status_disconnected">Disconnesso</string>
+    <string name="status_registering">Registrazione…</string>
+    <string name="status_connecting">Connessione…</string>
+    <string name="status_connected">Connesso</string>
+    <string name="status_error">Errore</string>
 
-    <string name="action_connect">Connect</string>
-    <string name="action_disconnect">Disconnect</string>
+    <string name="action_connect">Connetti</string>
+    <string name="action_disconnect">Disconnetti</string>
 
-    <string name="warp_on">WARP: ON</string>
-    <string name="warp_off">WARP: OFF (DNS only)</string>
+    <string name="warp_on">WARP: attivo</string>
+    <string name="warp_off">WARP: spento (solo DNS)</string>
 
-    <string name="apps_all">Apps: all</string>
-    <string name="apps_selected">Apps: %1$s</string>
+    <string name="apps_all">App: tutte</string>
+    <string name="apps_selected">App: %1$s</string>
+    <string name="apps_count">%1$d app</string>
 
-    <string name="autoconnect_on">Auto-connect on boot: ON</string>
-    <string name="autoconnect_off">Auto-connect on boot: OFF</string>
+    <string name="autoconnect_on">Avvio automatico: sì</string>
+    <string name="autoconnect_off">Avvio automatico: no</string>
 
-    <string name="picker_title">Apps routed through WARP</string>
-    <string name="picker_summary_all">None selected — every app uses WARP</string>
+    <!-- Hero panel, connected state -->
+    <string name="hero_exit_ip">IP di uscita</string>
+    <string name="hero_dns_only">Solo DNS · IP %1$s invariato</string>
+    <string name="hero_no_trace">Tunnel attivo, ma il controllo warp non risponde</string>
+    <string name="badge_warp_on">warp=on</string>
+    <string name="badge_warp_off">warp=off</string>
+
+    <string name="error_registration">Registrazione non riuscita. Controlla la rete e premi Connetti per riprovare.</string>
+    <string name="error_connect">Impossibile avviare il tunnel. Premi Connetti per riprovare.</string>
+    <string name="error_vpn_permission">Permesso VPN negato. Premi Connetti e accetta la richiesta di sistema.</string>
+
+    <string name="hint_reset">Tieni premuto il titolo per reimpostare la registrazione WARP</string>
+
+    <!-- App picker -->
+    <string name="picker_title">App instradate su WARP</string>
+    <string name="picker_summary_all">Nessuna selezionata — tutte le app usano WARP</string>
     <plurals name="picker_summary_count">
-        <item quantity="one">%1$d app uses WARP</item>
-        <item quantity="other">%1$d apps use WARP</item>
+        <item quantity="one">%1$d app usa WARP</item>
+        <item quantity="other">%1$d app usano WARP</item>
     </plurals>
-    <string name="picker_empty">No launchable apps found.</string>
-    <string name="picker_hint">Apps left out keep their normal connection and the router\'s DNS. Restart an app after changing this. Press BACK to return.</string>
+    <string name="picker_empty">Nessuna app avviabile trovata.</string>
+    <string name="picker_hint">Le app non selezionate mantengono la connessione normale e il DNS del router. Riavvia un\'app dopo la modifica. Premi INDIETRO per tornare.</string>
 
-    <string name="detail_connected">Exit IP %1$s · warp=%2$s</string>
-    <string name="detail_connected_dns">DNS only · exit IP %1$s unchanged</string>
-    <string name="detail_no_trace">Tunnel up, but cloudflare.com/cdn-cgi/trace is unreachable</string>
+    <!-- In-app update -->
+    <string name="update_title">Aggiornamento disponibile</string>
+    <string name="update_message">È disponibile la versione %1$s (hai la %2$s).\n\nScaricarla e installarla ora?</string>
+    <string name="update_action">Aggiorna</string>
+    <string name="update_later">Più tardi</string>
+    <string name="update_downloading">Download aggiornamento… %1$d%%</string>
+    <string name="update_failed">Download non riuscito. Riprova più tardi.</string>
+    <string name="update_permission_title">Permesso necessario</string>
+    <string name="update_permission_message">Consenti a questa app di installare app, poi premi di nuovo Aggiorna.</string>
+    <string name="update_permission_action">Apri impostazioni</string>
+    <string name="update_permission_missing">Abilita \"Installa app sconosciute\" per questa app nelle impostazioni del Fire TV.</string>
 
-    <string name="error_registration">Registration failed. Check the network and press Connect to retry.</string>
-    <string name="error_connect">Could not start the tunnel. Press Connect to retry.</string>
-    <string name="error_vpn_permission">VPN permission denied. Press Connect and accept the system dialog.</string>
-
-    <string name="hint_reset">Long-press the title to reset the WARP registration</string>
-
-    <string name="update_title">Update available</string>
-    <string name="update_message">Version %1$s is available (you have %2$s).\n\nDownload and install it now?</string>
-    <string name="update_action">Update</string>
-    <string name="update_later">Later</string>
-    <string name="update_downloading">Downloading update… %1$d%%</string>
-    <string name="update_failed">Download failed. Try again later.</string>
-    <string name="update_permission_title">Permission needed</string>
-    <string name="update_permission_message">Allow this app to install apps, then press Update again.</string>
-    <string name="update_permission_action">Open settings</string>
-    <string name="update_permission_missing">Enable "Install unknown apps" for this app in Fire TV settings.</string>
-
-    <string name="notification_channel_name">WARP tunnel</string>
-    <string name="notification_connected">Tunnel active</string>
-    <string name="notification_connecting">Connecting…</string>
-    <string name="fgs_special_use">WireGuard VPN tunnel managed by the user</string>
+    <!-- Notifications / foreground service -->
+    <string name="notification_channel_name">Tunnel WARP</string>
+    <string name="notification_connected">Tunnel attivo</string>
+    <string name="notification_connecting">Connessione…</string>
+    <string name="fgs_special_use">Tunnel VPN WireGuard gestito dall\'utente</string>
 </resources>

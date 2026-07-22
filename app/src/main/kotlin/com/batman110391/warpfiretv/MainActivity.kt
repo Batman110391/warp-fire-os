@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var titleView: TextView
     private lateinit var statusView: TextView
     private lateinit var detailView: TextView
+    private lateinit var badgeView: TextView
+    private lateinit var statusDot: View
     private lateinit var actionButton: Button
     private lateinit var warpButton: Button
     private lateinit var appsButton: Button
@@ -74,6 +76,9 @@ class MainActivity : ComponentActivity() {
         titleView = findViewById(R.id.title)
         statusView = findViewById(R.id.status)
         detailView = findViewById(R.id.detail)
+        badgeView = findViewById(R.id.warp_badge)
+        statusDot = findViewById(R.id.status_dot)
+        titleView.text = brandTitle()
         actionButton = findViewById(R.id.action_button)
         warpButton = findViewById(R.id.warp_button)
         appsButton = findViewById(R.id.apps_button)
@@ -175,11 +180,17 @@ class MainActivity : ComponentActivity() {
         renderSettingsButtons()
     }
 
-    /** Human-readable app names, falling back to the package name when it cannot be resolved. */
-    private fun labelsFor(packages: Set<String>): String = packages.joinToString(", ") { name ->
-        runCatching {
-            packageManager.getApplicationLabel(packageManager.getApplicationInfo(name, 0)).toString()
-        }.getOrDefault(name)
+    /**
+     * A short summary for the Apps button. Up to two names are spelled out; beyond that it collapses
+     * to a count, so the label can never overflow the button no matter how many apps are selected.
+     */
+    private fun labelsFor(packages: Set<String>): String {
+        if (packages.size > 2) return getString(R.string.apps_count, packages.size)
+        return packages.joinToString(", ") { name ->
+            runCatching {
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(name, 0)).toString()
+            }.getOrDefault(name)
+        }
     }
 
     private fun onWarpPressed() {
@@ -267,7 +278,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val trace = withContext(Dispatchers.IO) { api.fetchTrace() }
             if (trace == null) {
-                showState(UiState.CONNECTED, getString(R.string.detail_no_trace))
+                showState(UiState.CONNECTED, getString(R.string.hero_no_trace))
                 return@launch
             }
 
@@ -277,7 +288,7 @@ class MainActivity : ComponentActivity() {
             // With WARP off the traffic deliberately bypasses it, so warp=off is the correct
             // outcome and there is nothing to enrol.
             if (!settings.warpEnabled) {
-                showState(UiState.CONNECTED, getString(R.string.detail_connected_dns, egressIp))
+                showState(UiState.CONNECTED, getString(R.string.hero_dns_only, egressIp))
                 return@launch
             }
 
@@ -288,7 +299,14 @@ class MainActivity : ComponentActivity() {
                 return@launch
             }
 
-            showState(UiState.CONNECTED, getString(R.string.detail_connected, egressIp, warp))
+            val on = warp != "off"
+            val ipLine = "${getString(R.string.hero_exit_ip)} $egressIp"
+            if (on) {
+                showState(UiState.CONNECTED, detail = ipLine, badge = getString(R.string.badge_warp_on))
+            } else {
+                // Rare after the enrol retry; no verified badge, the state goes in the IP line.
+                showState(UiState.CONNECTED, detail = "$ipLine · ${getString(R.string.badge_warp_off)}")
+            }
         }
     }
 
@@ -395,7 +413,7 @@ class MainActivity : ComponentActivity() {
         detailView.text = text
     }
 
-    private fun showState(state: UiState, detail: String? = null) {
+    private fun showState(state: UiState, detail: String? = null, badge: String? = null) {
         statusView.tag = state
         statusView.setText(state.labelRes)
         actionButton.setText(if (state == UiState.CONNECTED) R.string.action_disconnect else R.string.action_connect)
@@ -406,6 +424,30 @@ class MainActivity : ComponentActivity() {
         autoConnectButton.isEnabled = idle
         detailView.text = detail.orEmpty()
         detailView.visibility = if (detail.isNullOrEmpty()) View.GONE else View.VISIBLE
+        badgeView.text = badge.orEmpty()
+        badgeView.visibility = if (badge.isNullOrEmpty()) View.GONE else View.VISIBLE
+
+        // Dot: accent while the tunnel is up or coming up, muted otherwise.
+        val dotColor = when (state) {
+            UiState.CONNECTED, UiState.CONNECTING, UiState.REGISTERING -> R.color.tv_accent
+            else -> R.color.tv_text_dim
+        }
+        statusDot.background.setTint(getColor(dotColor))
+    }
+
+    /** "WARP+" with the plus in the brand accent. */
+    private fun brandTitle(): CharSequence {
+        val text = getString(R.string.app_name)
+        val plus = text.indexOf('+')
+        if (plus < 0) return text
+        return android.text.SpannableString(text).apply {
+            setSpan(
+                android.text.style.ForegroundColorSpan(getColor(R.color.tv_accent)),
+                plus,
+                plus + 1,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+            )
+        }
     }
 
     private enum class UiState(val labelRes: Int) {

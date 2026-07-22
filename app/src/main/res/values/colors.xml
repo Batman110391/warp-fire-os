@@ -4,5 +4,7 @@
     <color name="tv_surface">#FF1C2027</color>
     <color name="tv_accent">#FFF6821F</color>
     <color name="tv_text">#FFFFFFFF</color>
-    <color name="tv_text_dim">#FFB0B6C0</color>
+    <color name="tv_text_dim">#FF8A94A2</color>
+    <color name="tv_verified">#FF2DD4BF</color>
+    <color name="tv_accent_ink">#FF1A1205</color>
 </resources>
