@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var actionButton: Button
     private lateinit var warpButton: Button
     private lateinit var appsButton: Button
+    private lateinit var autoConnectButton: Button
 
     private lateinit var store: WarpConfigStore
     private lateinit var registration: WarpRegistration
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
         actionButton = findViewById(R.id.action_button)
         warpButton = findViewById(R.id.warp_button)
         appsButton = findViewById(R.id.apps_button)
+        autoConnectButton = findViewById(R.id.autoconnect_button)
 
         store = WarpConfigStore(this)
         registration = WarpRegistration(store)
@@ -89,6 +91,7 @@ class MainActivity : ComponentActivity() {
         renderSettingsButtons()
         warpButton.setOnClickListener { onWarpPressed() }
         appsButton.setOnClickListener { startActivity(Intent(this, AppPickerActivity::class.java)) }
+        autoConnectButton.setOnClickListener { onAutoConnectPressed() }
 
         // Hidden reset: long-press the title to wipe the registration and get a new WARP device.
         titleView.setOnLongClickListener {
@@ -161,6 +164,15 @@ class MainActivity : ComponentActivity() {
         }
         // The app allowlist only means anything once traffic is actually routed through WARP.
         appsButton.isEnabled = settings.warpEnabled && !busy
+        autoConnectButton.setText(if (settings.autoConnect) R.string.autoconnect_on else R.string.autoconnect_off)
+    }
+
+    private fun onAutoConnectPressed() {
+        if (busy) return
+        // Only a stored preference — no effect on the running tunnel, so no reconnect.
+        settings = settings.copy(autoConnect = !settings.autoConnect)
+        store.tunnelSettings = settings
+        renderSettingsButtons()
     }
 
     /** Human-readable app names, falling back to the package name when it cannot be resolved. */
@@ -330,6 +342,7 @@ class MainActivity : ComponentActivity() {
         actionButton.isEnabled = false
         warpButton.isEnabled = false
         appsButton.isEnabled = false
+        autoConnectButton.isEnabled = false
         lifecycleScope.launch {
             val apk = runCatching {
                 updater.download(update) { percent ->
@@ -342,6 +355,7 @@ class MainActivity : ComponentActivity() {
                 showDetail(getString(R.string.update_failed))
                 actionButton.isEnabled = true
                 warpButton.isEnabled = true
+                autoConnectButton.isEnabled = true
                 renderSettingsButtons()
                 return@launch
             }
@@ -389,6 +403,7 @@ class MainActivity : ComponentActivity() {
         actionButton.isEnabled = idle
         warpButton.isEnabled = idle
         appsButton.isEnabled = idle && settings.warpEnabled
+        autoConnectButton.isEnabled = idle
         detailView.text = detail.orEmpty()
         detailView.visibility = if (detail.isNullOrEmpty()) View.GONE else View.VISIBLE
     }

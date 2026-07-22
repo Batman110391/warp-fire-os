@@ -17,6 +17,9 @@
     <string name="apps_all">Apps: all</string>
     <string name="apps_selected">Apps: %1$s</string>
 
+    <string name="autoconnect_on">Auto-connect on boot: ON</string>
+    <string name="autoconnect_off">Auto-connect on boot: OFF</string>
+
     <string name="picker_title">Apps routed through WARP</string>
     <string name="picker_summary_all">None selected — every app uses WARP</string>
     <plurals name="picker_summary_count">
@@ -49,5 +52,6 @@
 
     <string name="notification_channel_name">WARP tunnel</string>
     <string name="notification_connected">Tunnel active</string>
+    <string name="notification_connecting">Connecting…</string>
     <string name="fgs_special_use">WireGuard VPN tunnel managed by the user</string>
 </resources>

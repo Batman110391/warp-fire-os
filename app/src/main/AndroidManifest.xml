@@ -11,6 +11,8 @@
     <!-- In-app update: hands the downloaded APK to the system installer, which always asks the
          user to confirm. No silent install is possible. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Auto-connect on boot, the distributable stand-in for the always-on VPN Fire OS hides. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- API 30+ hides other packages unless they are declared here. Without this the app picker
          sees almost nothing, and the installed-package check would silently drop the very apps the
@@ -61,6 +63,26 @@
             android:name=".AppPickerActivity"
             android:exported="false"
             android:parentActivityName=".MainActivity" />
+
+        <service
+            android:name=".vpn.WarpConnectService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="@string/fgs_special_use" />
+        </service>
+
+        <receiver
+            android:name=".vpn.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <!-- Grants the system installer read access to the downloaded APK (API 24+). -->
         <provider

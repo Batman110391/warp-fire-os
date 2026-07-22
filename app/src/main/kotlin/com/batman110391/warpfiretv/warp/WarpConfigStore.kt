@@ -76,11 +76,13 @@ class WarpConfigStore(context: Context) {
         get() = TunnelSettings(
             warpEnabled = prefs.getBoolean(KEY_WARP_ENABLED, false),
             includedApps = prefs.getStringSet(KEY_INCLUDED_APPS, emptySet()).orEmpty(),
+            autoConnect = prefs.getBoolean(KEY_AUTO_CONNECT, true),
         )
         set(value) {
             prefs.edit()
                 .putBoolean(KEY_WARP_ENABLED, value.warpEnabled)
                 .putStringSet(KEY_INCLUDED_APPS, value.includedApps)
+                .putBoolean(KEY_AUTO_CONNECT, value.autoConnect)
                 .apply()
         }
 
@@ -125,5 +127,6 @@ class WarpConfigStore(context: Context) {
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_WARP_ENABLED = "warp_enabled"
         const val KEY_INCLUDED_APPS = "included_apps"
+        const val KEY_AUTO_CONNECT = "auto_connect"
     }
 }

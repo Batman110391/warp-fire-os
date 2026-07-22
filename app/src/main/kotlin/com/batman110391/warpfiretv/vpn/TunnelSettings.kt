@@ -15,6 +15,12 @@ package com.batman110391.warpfiretv.vpn
 data class TunnelSettings(
     val warpEnabled: Boolean = false,
     val includedApps: Set<String> = emptySet(),
+    /**
+     * Reconnect on boot. Fire OS exposes no VPN settings UI, so the OS-level always-on VPN is
+     * unreachable without adb; a boot receiver reconnecting the tunnel is the distributable
+     * equivalent. On by default.
+     */
+    val autoConnect: Boolean = true,
 ) {
     /** True when only a subset of apps is routed through WARP. */
     val isPerApp: Boolean get() = warpEnabled && includedApps.isNotEmpty()

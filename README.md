@@ -11,6 +11,9 @@ a full-tunnel WireGuard connection.
     WARP" in the official app. DNS is encrypted, everything else goes out normally and your public
     IP does not change. `warp=off` is the expected result in this mode.
 - MTU 1280, Cloudflare DNS (`1.1.1.1`, `1.0.0.1` + IPv6).
+- **Per-app WARP**: pick which apps go through WARP; the rest keep their normal connection.
+- **Auto-connect on boot**: the tunnel comes back on its own after a reboot (Fire OS hides the
+  system always-on VPN, so this is the distributable equivalent — see below).
 - One screen, fully D-pad navigable.
 - Userspace WireGuard (`wireguard-go` via the official `com.wireguard.android:tunnel` library) — no root.
 - In-app update from GitHub Releases.
@@ -31,10 +34,23 @@ a full-tunnel WireGuard connection.
    (Or generate an AFTVnews numeric shortcode from that URL and type the code instead.)
 3. Download → Install → Open → press **Connect**. Accept the system VPN dialog the first time; it
    is reachable with the remote.
-4. *(Optional)* **Always-on VPN**: Fire TV network settings → set this app as the always-on VPN so
-   the tunnel comes back automatically after a reboot.
+4. *(Optional)* Leave **Auto-connect on boot** on (default) so the tunnel returns by itself after a
+   reboot — see below for why this replaces the system always-on VPN.
 
 The asset name `warp-firetv.apk` is stable across releases, so the URL above never changes.
+
+### Auto-connect on boot (instead of always-on VPN)
+
+Fire OS ships no VPN settings screen — even the `android.settings.VPN_SETTINGS` intent does not
+resolve — so the OS-level always-on VPN can only be set through adb, which is no good for a
+distributed app. Instead the app reconnects itself on boot: the VPN consent granted at first launch
+stays valid, so a boot receiver can bring the tunnel back up with no dialog. A foreground service
+does the actual bring-up, because a background service start is refused on API 30+.
+
+It reconnects with your last settings (WARP on/off, selected apps). Note that Fire OS delivers the
+boot broadcast to third-party apps ~1–2 minutes after startup, so the tunnel returns shortly after
+boot, not instantly. Unlike a true always-on VPN there is **no kill switch** — traffic flows
+normally until the tunnel is up. Toggle it off from the main screen if you don't want it.
 
 ### Verifying it works
 
